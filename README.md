@@ -6,8 +6,8 @@ Filesystem for Meshblu
 Installation
 ------------
 
-h3. OSX
+### OSX
 
-Install [osxfues](http://osxfuse.github.io/)
+Install [osxfuse](http://osxfuse.github.io/)
 
 mkdir /tmp/meshblu
