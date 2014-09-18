@@ -22,6 +22,8 @@
   "dependencies": {
     "fuse4js": "~0.1.9",
     "coffee-script": "~1.8.0",
-    "commander": "~2.3.0"
+    "commander": "~2.3.0",
+    "skynet": "0.0.47",
+    "lodash": "~2.4.1"
   }
 }
