@@ -18,5 +18,8 @@
   "bugs": {
     "url": "https://github.com/octoblu/meshblu-fs/issues"
   },
-  "homepage": "https://github.com/octoblu/meshblu-fs"
+  "homepage": "https://github.com/octoblu/meshblu-fs",
+  "dependencies": {
+    "fuse4js": "~0.1.9"
+  }
 }
