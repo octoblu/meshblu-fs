@@ -30,7 +30,10 @@ class FileSystem
     if path == '/' || path == '/._.'
       return callback 0, size: 4096, mode: 0o40777
 
-    callback 0, size: 8096, mode: 0o100666
+    uuid = path.replace '/', ''
+    return callback 0, size: 0, mode: 0o100666 if /[g-zA-Z.]+/.test uuid
+
+    callback 0, size: _.size(@buffers[uuid]), mode: 0o100666
 
   init: (callback=->) =>
     callback()
@@ -50,7 +53,7 @@ class FileSystem
 
     if offset < device_buffer.length
       max_bytes = device_buffer.length - offset
-      if  len > max_bytes
+      if len > max_bytes
         len = max_bytes
 
       data = device_buffer.substring offset, len
@@ -84,7 +87,8 @@ class FileSystem
 
   start: (options={}) =>
     @meshblu.on 'message', (message) =>
-      @buffers[message.fromUUID] += JSON.stringify message
+      @buffers[message.fromUuid] ?= ''
+      @buffers[message.fromUuid] += "#{JSON.stringify message}\n"
 
     fuse4js.start @mount_point, @handlers, @debug, []
 
