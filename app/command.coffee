@@ -40,6 +40,7 @@ class Command
       console.error 'not ready', error
 
     meshblu.on 'ready', =>
+      meshblu.ready = true
       console.error 'ready'
 
     file_system = new FileSystem meshblu, @options
