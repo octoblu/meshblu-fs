@@ -21,6 +21,7 @@
   "homepage": "https://github.com/octoblu/meshblu-fs",
   "dependencies": {
     "fuse4js": "~0.1.9",
-    "coffee-script": "~1.8.0"
+    "coffee-script": "~1.8.0",
+    "commander": "~2.3.0"
   }
 }
