@@ -2,12 +2,18 @@ fuse4js = require 'fuse4js'
 fs      = require 'fs'
 _       = require 'lodash'
 
+FILE_MODES =
+  directory: 0o40777
+  file:      0o100666
+
 class FileSystem
   constructor: (meshblu, options={}) ->
     @meshblu     = meshblu
     @debug       = options.debug || false
     @mount_point = options.mount_point
     @buffers     = {}
+    @subscribe   = _.debounce @subscribe, 5000, true
+    @unsubscribe = _.debounce @unsubscribe, 5000
     @handlers =
       getattr:  @getattr
       readdir:  @readdir
@@ -28,12 +34,12 @@ class FileSystem
 
   getattr: (path, callback) =>
     if path == '/' || path == '/._.'
-      return callback 0, size: 4096, mode: 0o40777
+      return callback 0, size: 4096, mode: FILE_MODES.directory
 
     uuid = path.replace '/', ''
-    return callback 0, size: 0, mode: 0o100666 if /[g-zA-Z.]+/.test uuid
+    return callback 0, size: 0, mode: FILE_MODES.file if /[g-zA-Z.]+/.test uuid
 
-    callback 0, size: _.size(@buffers[uuid]), mode: 0o100666
+    callback 0, size: _.size(@buffers[uuid]), mode: FILE_MODES.file, mtime: new Date()
 
   init: (callback=->) =>
     callback()
@@ -43,8 +49,8 @@ class FileSystem
     return callback -2 if /[g-zA-Z.]+/.test uuid
 
     @buffers[uuid] ?= ''
-    @meshblu.subscribe uuid: uuid, =>
-      callback 0
+    @subscribe uuid
+    callback 0
 
   read: (path, offset, len, buffer, fh, callback=->) =>
     err  = 0
@@ -69,6 +75,10 @@ class FileSystem
       callback 0, _.pluck(devices, 'uuid')
 
   release: (path, fh, callback=->) =>
+    uuid = path.replace '/', ''
+    return callback 0 if /[g-zA-Z.]+/.test uuid
+
+    @unsubscribe uuid
     callback 0
 
   statfs: (callback=->) =>
@@ -95,6 +105,17 @@ class FileSystem
   unimplimented: (method_name) =>
     console.error "unimplemented: #{method_name}"
     throw new Error(method_name);
+
+  subscribe: (uuid) =>
+    # debounced by constructor
+    console.error 'subscribe: ', uuid
+    @meshblu.subscribe uuid: uuid, ->
+
+  unsubscribe: (uuid) =>
+    # debounced by constructor
+    console.error 'unsubscribe: ', uuid
+    @meshblu.unsubscribe uuid: uuid, =>
+      @buffers[uuid] = ''
 
 
 module.exports = FileSystem
