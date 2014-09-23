@@ -11,7 +11,8 @@ class FileSystem
     @meshblu     = meshblu
     @debug       = options.debug || false
     @mount_point = options.mount_point
-    @buffers     = {}
+    @input_buffers     = {}
+    @output_buffers     = {}
     @subscribe   = _.debounce @subscribe, 5000, true
     @unsubscribe = _.debounce @unsubscribe, 5000
     @handlers =
@@ -19,7 +20,7 @@ class FileSystem
       readdir:  @readdir
       open:     @open
       read:     @read
-      write:    => @unimplimented('write')
+      write:    @write
       release:  @release
       flush:    => @unimplimented('flush')
       create:   => @unimplimented('create')
@@ -39,7 +40,7 @@ class FileSystem
     uuid = path.replace '/', ''
     return callback 0, size: 0, mode: FILE_MODES.file if /[g-zA-Z.]+/.test uuid
 
-    callback 0, size: _.size(@buffers[uuid]), mode: FILE_MODES.file, mtime: new Date()
+    callback 0, size: _.size(@input_buffers[uuid]), mode: FILE_MODES.file, mtime: new Date()
 
   init: (callback=->) =>
     callback()
@@ -48,14 +49,14 @@ class FileSystem
     uuid = path.replace '/', ''
     return callback -2 if /[g-zA-Z.]+/.test uuid
 
-    @buffers[uuid] ?= ''
+    @input_buffers[uuid] ?= ''
     @subscribe uuid
     callback 0
 
   read: (path, offset, len, buffer, fh, callback=->) =>
     err  = 0
     uuid = path.replace '/', ''
-    device_buffer = @buffers[uuid]
+    device_buffer = @input_buffers[uuid]
 
     if offset < device_buffer.length
       max_bytes = device_buffer.length - offset
@@ -97,10 +98,25 @@ class FileSystem
 
   start: (options={}) =>
     @meshblu.on 'message', (message) =>
-      @buffers[message.fromUuid] ?= ''
-      @buffers[message.fromUuid] += "#{JSON.stringify message}\n"
+      @input_buffers[message.fromUuid] ?= ''
+      @input_buffers[message.fromUuid] += "#{JSON.stringify message}\n"
 
     fuse4js.start @mount_point, @handlers, @debug, []
+
+  write: (path, offset, len, buffer, fh, callback=->) =>
+    uuid = path.replace '/', ''
+    return callback 0 if /[g-zA-Z.]+/.test uuid
+
+    message_string = buffer.toString()
+    @output_buffers[uuid] ?= ''
+
+    _.each message_string, (character) =>
+      @output_buffers[uuid] += character
+      try
+        @meshblu.message JSON.parse @output_buffers[uuid]
+        @output_buffers[uuid] = ''
+
+    callback _.size message_string
 
   unimplimented: (method_name) =>
     console.error "unimplemented: #{method_name}"
@@ -115,7 +131,6 @@ class FileSystem
     # debounced by constructor
     console.error 'unsubscribe: ', uuid
     @meshblu.unsubscribe uuid: uuid, =>
-      @buffers[uuid] = ''
-
+      @input_buffers[uuid] = ''
 
 module.exports = FileSystem
