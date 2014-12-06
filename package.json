@@ -20,10 +20,11 @@
   },
   "homepage": "https://github.com/octoblu/meshblu-fs",
   "dependencies": {
-    "fuse4js": "~0.1.9",
     "coffee-script": "~1.8.0",
     "commander": "~2.3.0",
-    "skynet": "0.0.47",
-    "lodash": "~2.4.1"
+    "debug": "^2.1.0",
+    "fuse4js": "~0.1.9",
+    "lodash": "~2.4.1",
+    "meshblu": "^1.8.3"
   }
 }

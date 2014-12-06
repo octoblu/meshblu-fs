@@ -1,6 +1,7 @@
 fuse4js = require 'fuse4js'
 fs      = require 'fs'
 _       = require 'lodash'
+debug   = require('debug')('meshblu-fs:file_system')
 
 FILE_MODES =
   directory: 0o40777
@@ -70,8 +71,11 @@ class FileSystem
     callback err
 
   readdir: (path, callback=->) =>
+    debug 'readdir'
     return callback 0, [] unless @meshblu.ready
+    debug 'start @meshblu.mydevices'
     @meshblu.mydevices {}, (response) =>
+      debug '@meshblu.mydevices', response
       devices = _.where response.devices, online: true
       callback 0, _.pluck(devices, 'uuid')
 
