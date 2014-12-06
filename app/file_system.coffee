@@ -9,13 +9,14 @@ FILE_MODES =
 
 class FileSystem
   constructor: (meshblu, options={}) ->
-    @meshblu     = meshblu
-    @debug       = options.debug || false
-    @mount_point = options.mount_point
-    @input_buffers     = {}
-    @output_buffers     = {}
-    @subscribe   = _.debounce @subscribe, 5000, true
-    @unsubscribe = _.debounce @unsubscribe, 5000
+    @meshblu        = meshblu
+    @debug          = options.debug || false
+    @mount_point    = options.mount_point
+    @devices        = {}
+    @input_buffers  = {}
+    @output_buffers = {}
+    @subscribe      = _.debounce @subscribe, 5000, true
+    @unsubscribe    = _.debounce @unsubscribe, 5000
     @handlers =
       getattr:  @getattr
       readdir:  @readdir
@@ -34,30 +35,42 @@ class FileSystem
       setxattr: => @unimplimented('setxattr')
       statfs:   @statfs
 
+  add_or_update_device: (device) =>
+    old_device = @devices[device.uuid]
+    if old_device?
+      _.extend oldDevice, device
+    else
+      @file_system.devices?.push device
+
   getattr: (path, callback) =>
+    debug 'getattr', path
     if path == '/' || path == '/._.'
       return callback 0, size: 4096, mode: FILE_MODES.directory
 
     uuid = path.replace '/', ''
-    return callback 0, size: 0, mode: FILE_MODES.file if /[g-zA-Z.]+/.test uuid
+    return callback 0, size: 0, mode: FILE_MODES.file unless /[0-9a-f\-]+/.test uuid
 
-    callback 0, size: _.size(@input_buffers[uuid]), mode: FILE_MODES.file, mtime: new Date()
+    size = _.size JSON.stringify @devices[uuid]
+    debug 'got size', size, JSON.stringify(@devices[uuid])
+    callback 0, size: size, mode: FILE_MODES.file, mtime: new Date()
 
   init: (callback=->) =>
     callback()
 
   open: (path, flags, callback=->) =>
+    debug 'open', path
     uuid = path.replace '/', ''
     return callback -2 if /[g-zA-Z.]+/.test uuid
 
-    @input_buffers[uuid] ?= ''
-    @subscribe uuid
+    # @subscribe uuid
+    @devices[uuid] ?= ''
     callback 0
 
   read: (path, offset, len, buffer, fh, callback=->) =>
+    debug 'read', path, offset, len
     err  = 0
     uuid = path.replace '/', ''
-    device_buffer = @input_buffers[uuid]
+    device_buffer = JSON.stringify @devices[uuid]
 
     if offset < device_buffer.length
       max_bytes = device_buffer.length - offset
@@ -65,6 +78,7 @@ class FileSystem
         len = max_bytes
 
       data = device_buffer.substring offset, len
+      debug 'buffer.write', data, 0, len, 'ascii'
       buffer.write data, 0, len, 'ascii'
       err = len
 
@@ -73,14 +87,19 @@ class FileSystem
   readdir: (path, callback=->) =>
     debug 'readdir'
     return callback 0, [] unless @meshblu.ready
-    callback 0, _.pluck(@devices, 'uuid')
+    callback 0, _.pluck(_.values(@devices), 'uuid')
 
   release: (path, fh, callback=->) =>
+    debug 'release', path
     uuid = path.replace '/', ''
     return callback 0 if /[g-zA-Z.]+/.test uuid
 
-    @unsubscribe uuid
+    # @unsubscribe uuid
     callback 0
+
+  set_devices: (devices) =>
+    _.each devices, (device) =>
+      @devices[device.uuid] = device
 
   statfs: (callback=->) =>
     callback 0,

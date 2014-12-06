@@ -27,24 +27,16 @@ class MeshbluFS
     @meshblu.on 'config', (device) =>
       debug 'config'
       return if device.uuid == @options.uuid
-      oldDevice = _.findWhere @file_system.devices, {uuid: device.uuid}
 
-      if !oldDevice?
-        if device.online
-          @file_system.devices?.push device
-        return
-
-      if device.online
-        return _.extend oldDevice, device
-      else
-        return @file_system.devices = _.without @file_system.devices, oldDevice
+      @file_system.add_or_update_device device
 
   refresh_devices: =>
     debug 'start @meshblu.mydevices'
     @meshblu.mydevices {}, (response) =>
       debug 'end @meshblu.mydevices'
-      @file_system.devices = _.where response.devices, online: true
-      @subscribe_to @file_system.devices
+      devices = response.devices
+      @file_system.set_devices devices
+      @subscribe_to devices
 
   start: =>
     @file_system.start()
