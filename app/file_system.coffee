@@ -73,11 +73,7 @@ class FileSystem
   readdir: (path, callback=->) =>
     debug 'readdir'
     return callback 0, [] unless @meshblu.ready
-    debug 'start @meshblu.mydevices'
-    @meshblu.mydevices {}, (response) =>
-      debug '@meshblu.mydevices', response
-      devices = _.where response.devices, online: true
-      callback 0, _.pluck(devices, 'uuid')
+    callback 0, _.pluck(@devices, 'uuid')
 
   release: (path, fh, callback=->) =>
     uuid = path.replace '/', ''
